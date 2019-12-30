@@ -21,11 +21,15 @@ export default {
     },
     spotPrices: {
       type: Array
+    },
+    selectedCryptocurrencyIndex: {
+      type: Number,
+      default: 0
     }
   },
   data() {
     return {
-      selectedCryptocurrencyIndex: 0
+
     }
   }
 }

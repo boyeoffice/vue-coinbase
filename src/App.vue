@@ -5,7 +5,11 @@
         <div class="tabs">
           <left-tab :itemData="CRYPTOCURRENCY"
                     :spotPrices="spotPrices"
-                    @triggerCurrency="getCurrency"/>
+                    @triggerCurrency="getCurrency"
+                    :selectedCryptocurrencyIndex="selectedCryptocurrencyIndex"/>
+          <right-tab @triggerDuration="getDuration"
+                      :itemData="DURATION"
+                      :selectedDurationIndex="selectedDurationIndex"/>
         </div>
       </div>
     </div>
@@ -14,9 +18,12 @@
 
 <script>
 import LeftTab from './components/LeftTab'
+import RightTab from './components/RightTab'
+import currencyFormatter from 'currency-formatter'
 export default {
   components: {
-    LeftTab
+    LeftTab,
+    RightTab
   },
   name: 'App',
   data(){
@@ -48,13 +55,18 @@ export default {
     }
   },
   methods: {
-    getCurrency (data) {
-      console.log(data.name)
+    getCurrency (index, data, spotPrices) {
+      //console.log(data.name)
+      this.selectedCryptocurrencyIndex = index
+    },
+    getDuration(index, data) {
+      //console.log(data)
+      this.selectedDurationIndex = index
     },
     async fetchSpot() {
       this.selectedCryptocurrency = this.CRYPTOCURRENCY[0]
       let response = await fetch(this.url + this.ACTIVE_CURRENCY + '/spot?')
-      let { data }= await response.json()
+      let { data } = await response.json()
       //console.log(data)
       let spotPrices = data
       let formattedSpotPrices = spotPrices
@@ -62,8 +74,14 @@ export default {
               .map(e => ({ ...e, amount: +e.amount }))
       this.spotPrices = formattedSpotPrices
   	  this.spotPrice = this.spotPrices[0]
-      //let TITLE = this.CRYPTOCURRENCY[0].upper + ':' + ' ' + currencyFormatter.format(this.spotPrice.amount, { code: 'USD' })
-      //document.title = TITLE
+      let TITLE = this.CRYPTOCURRENCY[0].upper + ':' + ' ' + currencyFormatter.format(this.spotPrice.amount, { code: 'USD' })
+      document.title = TITLE
+      this.fetchPrice()
+    },
+    async fetchPrice() {
+      let response = await fetch(this.url + '/btc-usd/historic?period=week')
+      let { data } = await response.json()
+      console.log(data)
     }
   },
   created () {
