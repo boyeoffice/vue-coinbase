@@ -136,9 +136,61 @@ export default {
      this.sortTime = sortTime
      this.sortPrice = sortPrice
     },
-    getDuration(index, data) {
+    async getDuration(index, data) {
       //console.log(data)
       this.selectedDurationIndex = index
+      this.selectedDurationData = data
+      let response = await fetch(this.url + this.selectedCryptocurrencyData.key + '-' + 'usd' + '/historic?period=' + data.key)
+      let result = await response.json()
+      //console.log(result)
+      let priceHistory = result.data.prices
+			let formattedPriceHistory = priceHistory
+				 .sort((a, b) => new Date(a.time) - new Date(b.time))
+		          .map(e => ({ price: +e.price, time: new Date(e.time) }));
+		  this.priceHistory = formattedPriceHistory
+
+      priceHistory = this.priceHistory
+      let spotPrice = this.spotPrice.amount
+      let lastIndex = scan(priceHistory, (a, b) => a.time - b.time)
+      let oldPrice = priceHistory[lastIndex] && priceHistory[lastIndex].price
+      this.priceDifference = spotPrice - oldPrice
+      this.percentageDifference = ((spotPrice / oldPrice) - 1) * 100 || 0
+
+      //Min and Max Price
+      Vue.filter('formatAxisPrice', function(value,){
+       	return currencyFormatter.format(value, {
+			    precision: 0,
+			  })
+           })
+      let [minPrice, maxPrice] = extent(this.priceHistory, d => d.price)
+		  let arrayPrice = [maxPrice, minPrice]
+      this.verticalPrice = arrayPrice
+
+      //Chartjs
+      let tickCount = 7
+     var [minTime, maxTime] = extent(this.priceHistory, d => d.time);
+     var rangeStep = (maxTime - minTime) / (tickCount - 1);
+     let  generatedTicks = [];
+     for (var i = 0; i < tickCount; i += 1) {
+       var time = new Date(minTime).valueOf();
+       if(this.selectedDurationIndex === 0 || this.selectedDurationIndex === 1) {
+         generatedTicks.push(moment(time + (i * rangeStep)).format('HH:MM A'));
+       } else if (this.selectedDurationIndex === 2 || this.selectedDurationIndex === 3 || this.selectedDurationIndex === 4){
+         generatedTicks.push(moment(time + (i * rangeStep)).format('MMM DD'));
+       }else {
+         generatedTicks.push(moment(time + (i * rangeStep)).format('MMM YYYY'));
+       }
+     }
+     this.xAxesTime = generatedTicks
+
+     var sortPrice = []
+     var sortTime = []
+     this.priceHistory.forEach((list) => {
+       sortTime.push(moment(list.time).format('MMM DD'))
+       sortPrice.push(list.price)
+     })
+     this.sortTime = sortTime
+     this.sortPrice = sortPrice
     },
     async fetchSpot() {
       this.selectedCryptocurrency = this.CRYPTOCURRENCY[0]
