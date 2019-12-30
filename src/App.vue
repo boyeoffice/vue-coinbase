@@ -99,10 +99,42 @@ export default {
     	          .map(e => ({ ...e, amount: +e.amount }));
     	          this.spotPrices = formattedSpotPrices
     	          this.spotPrice = spotPrices[index]
-			this.historyData(data)
+			this.historyData()
     },
-    historyData(data) {
+    async historyData() {
+      let response = await fetch(this.url + this.selectedCryptocurrencyData.key + '-' + 'usd' + '/historic?period=' + this.selectedDurationData.key)
+      let { data } = await response.json()
+      let priceHistory = data.prices
+			let formattedPriceHistory = priceHistory
+				 .sort((a, b) => new Date(a.time) - new Date(b.time))
+		          .map(e => ({ price: +e.price, time: new Date(e.time) }));
+		  this.priceHistory = formattedPriceHistory
 
+      priceHistory = this.priceHistory
+      let spotPrice = this.spotPrice.amount
+      let lastIndex = scan(priceHistory, (a, b) => a.time - b.time)
+      let oldPrice = priceHistory[lastIndex] && priceHistory[lastIndex].price
+      this.priceDifference = spotPrice - oldPrice
+      this.percentageDifference = ((spotPrice / oldPrice) - 1) * 100 || 0
+
+      //Min and Max Price
+      Vue.filter('formatAxisPrice', function(value,){
+         return currencyFormatter.format(value, {
+           precision: 0,
+         })
+      })
+     let [minPrice, maxPrice] = extent(this.priceHistory, d => d.price)
+     let arrayPrice = [maxPrice, minPrice]
+     this.verticalPrice = arrayPrice
+
+     let sortPrice = []
+  	 let sortTime = []
+  	 this.priceHistory.forEach((list) => {
+  	 sortTime.push(moment(list.time).format('MMM DD'))
+  		sortPrice.push(list.price)
+     })
+     this.sortTime = sortTime
+     this.sortPrice = sortPrice
     },
     getDuration(index, data) {
       //console.log(data)
