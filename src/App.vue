@@ -32,6 +32,10 @@ import LeftTab from './components/LeftTab'
 import RightTab from './components/RightTab'
 import TableCell from './components/TableCell'
 import currencyFormatter from 'currency-formatter'
+import moment from 'moment'
+import Vue from 'vue'
+import { scan } from 'd3-array'
+import { extent } from 'd3-array'
 export default {
   components: {
     LeftTab,
@@ -71,14 +75,34 @@ export default {
       selectedCryptocurrency: {},
       priceDifference: null,
       percentageDifference: null,
+      verticalPrice: [],
+      sortTime: [],
+		  sortPrice: [],
       url: 'https://api.coinbase.com/v2/prices/',
       ACTIVE_CURRENCY: 'usd'
     }
   },
   methods: {
-    getCurrency (index, data, spotPrices) {
+    async getCurrency (index, data, spotPrices) {
       //console.log(data.name)
       this.selectedCryptocurrencyIndex = index
+      this.cryptocurrencyLabel = data.name
+			let TITLE = data.upper + ':' + ' ' + currencyFormatter.format(spotPrices[index].amount, { code: 'USD' })
+			document.title = TITLE
+      this.selectedCryptocurrencyData = data
+      let response = await fetch(this.url + this.ACTIVE_CURRENCY + '/spot?')
+      let  result = await response.json()
+      //console.log(result)
+      spotPrices = result.data
+      let formattedSpotPrices = spotPrices
+          .filter(e => ['BTC', 'BCH', 'ETH', 'LTC'].indexOf(e.base) >= 0)
+    	          .map(e => ({ ...e, amount: +e.amount }));
+    	          this.spotPrices = formattedSpotPrices
+    	          this.spotPrice = spotPrices[index]
+			this.historyData(data)
+    },
+    historyData(data) {
+
     },
     getDuration(index, data) {
       //console.log(data)
@@ -102,7 +126,50 @@ export default {
     async fetchPrice() {
       let response = await fetch(this.url + '/btc-usd/historic?period=week')
       let { data } = await response.json()
-      console.log(data)
+      //console.log(data)
+      let priceHistory = data.prices
+      let formattedPriceHistory = priceHistory
+				 .sort((a, b) => new Date(a.time) - new Date(b.time))
+		          .map(e => ({ price: +e.price, time: new Date(e.time) }));
+		  this.priceHistory = formattedPriceHistory
+
+      priceHistory = this.priceHistory
+      let spotPrice = this.spotPrice.amount
+      let lastIndex = scan(priceHistory, (a, b) => a.time - b.time)
+      let oldPrice = priceHistory[lastIndex] && priceHistory[lastIndex].price
+      this.priceDifference = spotPrice - oldPrice
+      this.percentageDifference = ((spotPrice / oldPrice) - 1) * 100 || 0
+
+      //Min and Max Price
+       Vue.filter('formatAxisPrice', function(value,){
+       	return currencyFormatter.format(value, {
+			    precision: 0,
+			  })
+           })
+      let [minPrice, maxPrice] = extent(this.priceHistory, d => d.price)
+		  let arrayPrice = [maxPrice, minPrice]
+      this.verticalPrice = arrayPrice
+
+      //Chartjs
+		  let tickCount = 7
+		  let [minTime, maxTime] = extent(this.priceHistory, d => d.time);
+	    let rangeStep = (maxTime - minTime) / (tickCount - 1);
+	    let generatedTicks = [];
+	    for (var i = 0; i < tickCount; i += 1) {
+	      var time = new Date(minTime).valueOf();
+	      generatedTicks.push(moment(time + (i * rangeStep)).format('MMM DD'));
+	    }
+	    this.xAxesTime = generatedTicks
+
+      var sortPrice = []
+			var sortTime = []
+		  this.priceHistory.forEach((list) => {
+			sortTime.push(moment(list.time).format('MMM DD'))
+			sortPrice.push(list.price)
+	     	})
+      this.sortPrice = sortPrice
+      this.sortTime = sortTime
+
     }
   },
   created () {
