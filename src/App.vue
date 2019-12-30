@@ -11,6 +11,17 @@
                       :itemData="DURATION"
                       :selectedDurationIndex="selectedDurationIndex"/>
         </div>
+        <div class="table">
+          <div class="PriceTable">
+            <table-cell :spotPrice="spotPrice"
+                  :cryptocurrencyLabel="cryptocurrencyLabel"/>
+            <table-cell :priceDifference="priceDifference"
+                  :selectedDurationData="selectedDurationData"
+                  :CURRENCY="CURRENCY"/>
+            <table-cell :percentageDifference="percentageDifference"
+                  :selectedDurationData1="selectedDurationData"/>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -19,11 +30,13 @@
 <script>
 import LeftTab from './components/LeftTab'
 import RightTab from './components/RightTab'
+import TableCell from './components/TableCell'
 import currencyFormatter from 'currency-formatter'
 export default {
   components: {
     LeftTab,
-    RightTab
+    RightTab,
+    TableCell
   },
   name: 'App',
   data(){
@@ -42,6 +55,12 @@ export default {
 			  { key: 'year', codename: '1Y', humanize: 'since last year' },
 			  { key: 'all', codename: 'ALL', humanize: '' }
 			],
+      CURRENCY: [
+			   { key: 'cad', name: 'Canadian Dollar' },
+			   { key: 'usd', name: 'US Dollar' },
+			],
+      selectedDurationData: { key: 'week', codename: '1W', humanize: 'since last week' },
+      selectedCryptocurrencyData: {upper: 'BTC', key: 'btc', name: 'Bitcoin'},
       spotPrices: [],
       spotPrice: {},
 			priceHistory: [],
@@ -50,6 +69,8 @@ export default {
 			cryptocurrencyLabel: null,
 			durationLabel: null,
       selectedCryptocurrency: {},
+      priceDifference: null,
+      percentageDifference: null,
       url: 'https://api.coinbase.com/v2/prices/',
       ACTIVE_CURRENCY: 'usd'
     }

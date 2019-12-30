@@ -6,9 +6,9 @@
       <span v-if="spotPrices[0]" class="cryptocurrency"
             @click="$emit('triggerCurrency', index, data, spotPrices)">
         <span>{{ data.name }}</span>
-        <span>{{ spotPrices[index].amount }}</span>
+        <span>{{ spotPrices[index].amount | currency }}</span>
       </span>
-      <span v-else @click="$emit('triggerCurrency', data)" class="cryptocurrency"> <span>{{ data.name }}</span></span>
+      <span v-else class="cryptocurrency"> <span>{{ data.name }}</span></span>
     </div>
   </div>
 </template>
