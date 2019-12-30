@@ -11,6 +11,17 @@
                       :itemData="DURATION"
                       :selectedDurationIndex="selectedDurationIndex"/>
         </div>
+        <div class="table">
+          <div class="PriceTable">
+            <table-cell :spotPrice="spotPrice"
+                  :cryptocurrencyLabel="cryptocurrencyLabel"/>
+            <table-cell :priceDifference="priceDifference"
+                  :selectedDurationData="selectedDurationData"
+                  :CURRENCY="CURRENCY"/>
+            <table-cell :percentageDifference="percentageDifference"
+                  :selectedDurationData1="selectedDurationData"/>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -19,11 +30,17 @@
 <script>
 import LeftTab from './components/LeftTab'
 import RightTab from './components/RightTab'
+import TableCell from './components/TableCell'
 import currencyFormatter from 'currency-formatter'
+import moment from 'moment'
+import Vue from 'vue'
+import { scan } from 'd3-array'
+import { extent } from 'd3-array'
 export default {
   components: {
     LeftTab,
-    RightTab
+    RightTab,
+    TableCell
   },
   name: 'App',
   data(){
@@ -42,6 +59,12 @@ export default {
 			  { key: 'year', codename: '1Y', humanize: 'since last year' },
 			  { key: 'all', codename: 'ALL', humanize: '' }
 			],
+      CURRENCY: [
+			   { key: 'cad', name: 'Canadian Dollar' },
+			   { key: 'usd', name: 'US Dollar' },
+			],
+      selectedDurationData: { key: 'week', codename: '1W', humanize: 'since last week' },
+      selectedCryptocurrencyData: {upper: 'BTC', key: 'btc', name: 'Bitcoin'},
       spotPrices: [],
       spotPrice: {},
 			priceHistory: [],
@@ -50,18 +73,124 @@ export default {
 			cryptocurrencyLabel: null,
 			durationLabel: null,
       selectedCryptocurrency: {},
+      priceDifference: null,
+      percentageDifference: null,
+      verticalPrice: [],
+      sortTime: [],
+		  sortPrice: [],
       url: 'https://api.coinbase.com/v2/prices/',
       ACTIVE_CURRENCY: 'usd'
     }
   },
   methods: {
-    getCurrency (index, data, spotPrices) {
+    async getCurrency (index, data, spotPrices) {
       //console.log(data.name)
       this.selectedCryptocurrencyIndex = index
+      this.cryptocurrencyLabel = data.name
+			let TITLE = data.upper + ':' + ' ' + currencyFormatter.format(spotPrices[index].amount, { code: 'USD' })
+			document.title = TITLE
+      this.selectedCryptocurrencyData = data
+      let response = await fetch(this.url + this.ACTIVE_CURRENCY + '/spot?')
+      let  result = await response.json()
+      //console.log(result)
+      spotPrices = result.data
+      let formattedSpotPrices = spotPrices
+          .filter(e => ['BTC', 'BCH', 'ETH', 'LTC'].indexOf(e.base) >= 0)
+    	          .map(e => ({ ...e, amount: +e.amount }));
+    	          this.spotPrices = formattedSpotPrices
+    	          this.spotPrice = spotPrices[index]
+			this.historyData()
     },
-    getDuration(index, data) {
+    async historyData() {
+      let response = await fetch(this.url + this.selectedCryptocurrencyData.key + '-' + 'usd' + '/historic?period=' + this.selectedDurationData.key)
+      let { data } = await response.json()
+      let priceHistory = data.prices
+			let formattedPriceHistory = priceHistory
+				 .sort((a, b) => new Date(a.time) - new Date(b.time))
+		          .map(e => ({ price: +e.price, time: new Date(e.time) }));
+		  this.priceHistory = formattedPriceHistory
+
+      priceHistory = this.priceHistory
+      let spotPrice = this.spotPrice.amount
+      let lastIndex = scan(priceHistory, (a, b) => a.time - b.time)
+      let oldPrice = priceHistory[lastIndex] && priceHistory[lastIndex].price
+      this.priceDifference = spotPrice - oldPrice
+      this.percentageDifference = ((spotPrice / oldPrice) - 1) * 100 || 0
+
+      //Min and Max Price
+      Vue.filter('formatAxisPrice', function(value,){
+         return currencyFormatter.format(value, {
+           precision: 0,
+         })
+      })
+     let [minPrice, maxPrice] = extent(this.priceHistory, d => d.price)
+     let arrayPrice = [maxPrice, minPrice]
+     this.verticalPrice = arrayPrice
+
+     let sortPrice = []
+  	 let sortTime = []
+  	 this.priceHistory.forEach((list) => {
+  	 sortTime.push(moment(list.time).format('MMM DD'))
+  		sortPrice.push(list.price)
+     })
+     this.sortTime = sortTime
+     this.sortPrice = sortPrice
+    },
+    async getDuration(index, data) {
       //console.log(data)
       this.selectedDurationIndex = index
+      this.selectedDurationData = data
+      let response = await fetch(this.url + this.selectedCryptocurrencyData.key + '-' + 'usd' + '/historic?period=' + data.key)
+      let result = await response.json()
+      //console.log(result)
+      let priceHistory = result.data.prices
+			let formattedPriceHistory = priceHistory
+				 .sort((a, b) => new Date(a.time) - new Date(b.time))
+		          .map(e => ({ price: +e.price, time: new Date(e.time) }));
+		  this.priceHistory = formattedPriceHistory
+
+      priceHistory = this.priceHistory
+      let spotPrice = this.spotPrice.amount
+      let lastIndex = scan(priceHistory, (a, b) => a.time - b.time)
+      let oldPrice = priceHistory[lastIndex] && priceHistory[lastIndex].price
+      this.priceDifference = spotPrice - oldPrice
+      this.percentageDifference = ((spotPrice / oldPrice) - 1) * 100 || 0
+
+      //Min and Max Price
+      Vue.filter('formatAxisPrice', function(value,){
+       	return currencyFormatter.format(value, {
+			    precision: 0,
+			  })
+           })
+      let [minPrice, maxPrice] = extent(this.priceHistory, d => d.price)
+		  let arrayPrice = [maxPrice, minPrice]
+      this.verticalPrice = arrayPrice
+
+      //Chartjs
+      let tickCount = 7
+     var [minTime, maxTime] = extent(this.priceHistory, d => d.time);
+     var rangeStep = (maxTime - minTime) / (tickCount - 1);
+     let  generatedTicks = [];
+     for (var i = 0; i < tickCount; i += 1) {
+       var time = new Date(minTime).valueOf();
+       if(this.selectedDurationIndex === 0 || this.selectedDurationIndex === 1) {
+         generatedTicks.push(moment(time + (i * rangeStep)).format('HH:MM A'));
+       } else if (this.selectedDurationIndex === 2 || this.selectedDurationIndex === 3 || this.selectedDurationIndex === 4){
+         generatedTicks.push(moment(time + (i * rangeStep)).format('MMM DD'));
+       }else {
+         generatedTicks.push(moment(time + (i * rangeStep)).format('MMM YYYY'));
+       }
+     }
+     this.xAxesTime = generatedTicks
+
+     var sortPrice = []
+     var sortTime = []
+     this.priceHistory.forEach((list) => {
+       sortTime.push(moment(list.time).format('MMM DD'))
+       sortPrice.push(list.price)
+     })
+     this.sortTime = sortTime
+     this.sortPrice = sortPrice
     },
     async fetchSpot() {
       this.selectedCryptocurrency = this.CRYPTOCURRENCY[0]
@@ -81,7 +210,50 @@ export default {
     async fetchPrice() {
       let response = await fetch(this.url + '/btc-usd/historic?period=week')
       let { data } = await response.json()
-      console.log(data)
+      //console.log(data)
+      let priceHistory = data.prices
+      let formattedPriceHistory = priceHistory
+				 .sort((a, b) => new Date(a.time) - new Date(b.time))
+		          .map(e => ({ price: +e.price, time: new Date(e.time) }));
+		  this.priceHistory = formattedPriceHistory
+
+      priceHistory = this.priceHistory
+      let spotPrice = this.spotPrice.amount
+      let lastIndex = scan(priceHistory, (a, b) => a.time - b.time)
+      let oldPrice = priceHistory[lastIndex] && priceHistory[lastIndex].price
+      this.priceDifference = spotPrice - oldPrice
+      this.percentageDifference = ((spotPrice / oldPrice) - 1) * 100 || 0
+
+      //Min and Max Price
+       Vue.filter('formatAxisPrice', function(value,){
+       	return currencyFormatter.format(value, {
+			    precision: 0,
+			  })
+           })
+      let [minPrice, maxPrice] = extent(this.priceHistory, d => d.price)
+		  let arrayPrice = [maxPrice, minPrice]
+      this.verticalPrice = arrayPrice
+
+      //Chartjs
+		  let tickCount = 7
+		  let [minTime, maxTime] = extent(this.priceHistory, d => d.time);
+	    let rangeStep = (maxTime - minTime) / (tickCount - 1);
+	    let generatedTicks = [];
+	    for (var i = 0; i < tickCount; i += 1) {
+	      var time = new Date(minTime).valueOf();
+	      generatedTicks.push(moment(time + (i * rangeStep)).format('MMM DD'));
+	    }
+	    this.xAxesTime = generatedTicks
+
+      var sortPrice = []
+			var sortTime = []
+		  this.priceHistory.forEach((list) => {
+			sortTime.push(moment(list.time).format('MMM DD'))
+			sortPrice.push(list.price)
+	     	})
+      this.sortPrice = sortPrice
+      this.sortTime = sortTime
+
     }
   },
   created () {
