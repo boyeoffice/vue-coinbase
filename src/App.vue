@@ -22,6 +22,21 @@
                   :selectedDurationData1="selectedDurationData"/>
           </div>
         </div>
+        <div class="chart">
+          <div class="topSection">
+            <div class="VerticalChartAxis left">
+              <div class="trick" v-for="(data, index) in verticalPrice" :key="index">
+                ${{ data | formatAxisPrice }}
+              </div>
+            </div>
+            <!-- line-chart -->
+            <div class="VerticalChartAxis right">
+              <div class="trick" v-for="(data, index) in verticalPrice" :key="index">
+                ${{ data | formatAxisPrice }}
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -229,7 +244,7 @@ export default {
        	return currencyFormatter.format(value, {
 			    precision: 0,
 			  })
-           })
+      })
       let [minPrice, maxPrice] = extent(this.priceHistory, d => d.price)
 		  let arrayPrice = [maxPrice, minPrice]
       this.verticalPrice = arrayPrice
