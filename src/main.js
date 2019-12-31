@@ -4,6 +4,8 @@ import './assets/app.css'
 import Vue2Filters from 'vue2-filters'
 Vue.use(Vue2Filters)
 
+window.currencyFormatter = require('currency-formatter')
+
 Vue.config.productionTip = false
 
 /* eslint-disable no-new */

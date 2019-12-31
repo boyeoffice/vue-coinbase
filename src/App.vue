@@ -22,16 +22,40 @@
                   :selectedDurationData1="selectedDurationData"/>
           </div>
         </div>
+        <div class="chart">
+          <div class="topSection">
+            <div class="VerticalChartAxis left">
+              <div class="trick" v-for="(data, index) in verticalPrice" :key="index">
+                ${{ data | formatAxisPrice }}
+              </div>
+            </div>
+            <line-chart :priceHistory="priceHistory"
+                        :verticalPrice="verticalPrice"
+                        :selectedCryptocurrency="selectedCryptocurrency"/>
+            <div class="VerticalChartAxis right">
+              <div class="trick" v-for="(data, index) in verticalPrice" :key="index">
+                ${{ data | formatAxisPrice }}
+              </div>
+            </div>
+          </div>
+          <div class="HorizontalChartAxis">
+    				<div class="tick" v-for="tick in xAxesTime">{{tick}}</div>
+    			</div>
+        </div>
       </div>
+      <div class="Footer">
+		      <span>Powered By COINBASE</span>
+	    </div>
     </div>
   </div>
 </template>
 
 <script>
-import LeftTab from './components/LeftTab'
-import RightTab from './components/RightTab'
-import TableCell from './components/TableCell'
-import currencyFormatter from 'currency-formatter'
+import LeftTab from '@/components/LeftTab'
+import RightTab from '@/components/RightTab'
+import TableCell from '@/components/TableCell'
+import LineChart from '@/components/LineChart'
+//import currencyFormatter from 'currency-formatter'
 import moment from 'moment'
 import Vue from 'vue'
 import { scan } from 'd3-array'
@@ -40,7 +64,8 @@ export default {
   components: {
     LeftTab,
     RightTab,
-    TableCell
+    TableCell,
+    LineChart
   },
   name: 'App',
   data(){
@@ -79,7 +104,8 @@ export default {
       sortTime: [],
 		  sortPrice: [],
       url: 'https://api.coinbase.com/v2/prices/',
-      ACTIVE_CURRENCY: 'usd'
+      ACTIVE_CURRENCY: 'usd',
+      xAxesTime: []
     }
   },
   methods: {
@@ -229,7 +255,7 @@ export default {
        	return currencyFormatter.format(value, {
 			    precision: 0,
 			  })
-           })
+      })
       let [minPrice, maxPrice] = extent(this.priceHistory, d => d.price)
 		  let arrayPrice = [maxPrice, minPrice]
       this.verticalPrice = arrayPrice
