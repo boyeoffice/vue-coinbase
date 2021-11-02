@@ -1,16 +1,12 @@
-import Vue from 'vue'
-import App from './App'
-import './assets/app.css'
-import Vue2Filters from 'vue2-filters'
-Vue.use(Vue2Filters)
+import Vue from "vue";
+import App from "./App.vue";
+import store from "./store";
+import "./assets/styles/normalize.css";
+import "./assets/styles/base.css";
 
-window.currencyFormatter = require('currency-formatter')
+Vue.config.productionTip = false;
 
-Vue.config.productionTip = false
-
-/* eslint-disable no-new */
 new Vue({
-  el: '#app',
-  components: { App },
-  template: '<App/>'
-})
+  store,
+  render: (h) => h(App),
+}).$mount("#app");
