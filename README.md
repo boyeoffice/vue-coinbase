@@ -1,4 +1,4 @@
-# vue-3
+# Vue Coinbase
 
 > A Vue.js project
 
